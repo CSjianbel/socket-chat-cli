@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -15,6 +16,10 @@
       exit(EXIT_FAILURE); \
     } \
   } while (0)
+
+// prototypes
+void receive_message(int client_socket);
+void send_message(int client_socket);
 
 
 int main(int argc, char* argv[]) {
@@ -41,32 +46,44 @@ int main(int argc, char* argv[]) {
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(port_number);
   memcpy(&server_addr.sin_addr.s_addr, server->h_addr, server->h_length);
-
+  
   // try to connect to the server
-  printf("Connecting to server at port: %d ...\n", port_number);
   TRY(connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)), < 0, "Connection Failed!\n");
-  printf("Connected successfully!\n");
+  printf("Connected to Server!\n\n");
+  printf("Start chatting:\n");
 
-  // message storage
-  char buffer[256];
-  memset(buffer, 0, 256);
+  // send and receive message to and from server
+  int pid = fork();
+  while (1) {
+    if (pid == 0) receive_message(client_socket);
+    else send_message(client_socket);
+  }
 
-  //send message to server
-  printf("< ");
-  fgets(buffer, 255, stdin);
-  printf("Sending message to server ...\n");
-
-  int n;
-  TRY(n = send(client_socket, buffer, strlen(buffer), 0), < 0, "Sending Failed!\n");
-  printf("Message sent successfully!\n");
-  printf("Waiting for reply ...\n");
-
-   // receive server reply
-  memset(buffer, 0, 256);
-  TRY(n = recv(client_socket, buffer, 255, 0), < 0, "Receiving Failed!\n");
-  printf("Server reply: %s", buffer);
-
+  printf("Closing connection ...\n");
   close(client_socket);
-
   return 0;
 }
+
+
+void receive_message(int client_socket) {
+  char buffer[256];
+  memset(buffer, 0, sizeof(buffer));
+
+  // receivng message from server
+  int bytes_received;
+  TRY(bytes_received = recv(client_socket, buffer, 255, 0), < 0, "Receiving Failed!\n");
+  printf("[server] > %s", buffer);
+}
+
+
+void send_message(int client_socket) {
+  char buffer[256];
+  memset(buffer, 0, sizeof(buffer));
+  
+  // sending message to server
+  int bytes_sent;
+  printf("< ");
+  fgets(buffer, 255, stdin);
+  TRY(bytes_sent = send(client_socket, buffer, strlen(buffer), 0), < 0, "Sending Failed!\n");
+}
+
