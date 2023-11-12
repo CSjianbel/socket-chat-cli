@@ -16,4 +16,5 @@ chmod +x compile.sh && ./compile.sh
 
 # Demo
 ---------------
-![demo](https://github.com/NoelEmaas/socket-chat-cli/assets/90034393/9a24522a-e963-4ff4-a4fc-15d13b263ea4)
+![demo](https://github.com/NoelEmaas/socket-chat-cli/assets/90034393/b46bc843-f090-409a-8b6e-a136cb842695)
+
