@@ -54,8 +54,8 @@ int main (int argc, char* argv[]) {
 
   // try to connect to client
   TRY(client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &client_size), < 0, "Accepting Failed!\n");
-  printf("Client Connected Successfully!\n");
-  printf("Start Chatting: \n");
+  printf("Client Connected Successfully!\n\n");
+  printf("Start Chatting: \n\n");
 
   // send and receive message to and from client
   int pid = fork();
@@ -68,7 +68,6 @@ int main (int argc, char* argv[]) {
   }
 
   printf("Closing connection ...\n");
-
   close(client_socket);
   close(server_socket);
 
@@ -77,30 +76,36 @@ int main (int argc, char* argv[]) {
 
 
 void receive_message(int client_socket) {
-  // message storage
-  char buffer[256];
-  memset(buffer, 0, sizeof(buffer));
+    char buffer[256];
+    memset(buffer, 0, sizeof(buffer));
 
-  // receiving message from client
-  int bytes_received;
-  TRY(bytes_received = recv(client_socket, buffer, 255, 0), < 0, "Receiving Failed!\n");
-  printf("[client] > %s", buffer);
+    // receiving message from server
+    int bytes_received;
+    TRY(bytes_received = recv(client_socket, buffer, 255, 0), < 0, "Receiving Failed!\n");
+
+    // move cursor to the beginning of the line and clear the line
+    printf("\033[1G\033[2K");
+
+    // display the received message
+    printf("[client] > %s", buffer);
+
+    // prompt for a new input
+    printf(">> ");
+    fflush(stdout);
 }
 
+void send_message(int client_socket) {
+    char buffer[256];
+    memset(buffer, 0, sizeof(buffer));
 
-void send_message (int client_socket) {
-  //message storage
-  char buffer[256];
-  char userInput[256];
+    // move cursor to the beginning of the line and clear the line
+    printf("\033[1G\033[2K");
 
-  memset(userInput, 0, sizeof(userInput));
-  memset(buffer, 0, sizeof(buffer));
+    // prompt for user input
+    printf(">> ");
+    fgets(buffer, 255, stdin);
 
-  // sending message to client
-  int bytes_sent;
-  printf("< ");
-  fgets(buffer, 255, stdin);
-  
-
-  TRY(bytes_sent = send(client_socket, buffer, strlen(buffer), 0), < 0, "Sending Failed!\n");
+    // sending message to server
+    int bytes_sent;
+    TRY(bytes_sent = send(client_socket, buffer, strlen(buffer), 0), < 0, "Sending Failed!\n");
 }
