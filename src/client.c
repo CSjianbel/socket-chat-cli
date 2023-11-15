@@ -8,19 +8,10 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include "error.h"
 #include "memory.h"
+#include "message.h"
 
-// Wrapper function for error handling
-#define TRY(expr, condition, error_msg) \
-  do { \
-    if ((expr) condition) { perror(error_msg); \
-      exit(EXIT_FAILURE); \
-    } \
-  } while (0)
-
-// prototypes
-void receive_message(int client_socket);
-void send_message(int client_socket);
 
 int main(int argc, char* argv[]) {
   // Check if the passed arguments is valid
@@ -52,56 +43,22 @@ int main(int argc, char* argv[]) {
   printf("Connected to Server!\n\n");
   printf("Start chatting:\n\n");
 
+  /*
   // Open the shared memory object
   int shm_fd = open_shared_memory();
 
   void *shm_ptr = mmap(NULL, SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
+  */
 
   // send and receive message to and from server
   int pid = fork();
   while (1) {
-    if (pid == 0) send_message(client_socket);
-    else receive_message(client_socket);
+    if (pid == 0) send_message(client_socket, "server");
+    else receive_message(client_socket, "server");
   }
 
   printf("Closing connection ...\n");
   close(client_socket);
   
   return 0;
-}
-
-
-void receive_message(int client_socket) {
-    char buffer[256];
-    memset(buffer, 0, sizeof(buffer));
-
-    // receiving message from server
-    int bytes_received;
-    TRY(bytes_received = recv(client_socket, buffer, 255, 0), < 0, "Receiving Failed!\n");
-
-    // move cursor to the beginning of the line and clear the line
-    printf("\033[1G\033[2K");
-
-    // display the received message
-    printf("[server] > %s", buffer);
-
-    // prompt for a new input
-    printf(">> ");
-    fflush(stdout);
-}
-
-void send_message(int client_socket) {
-    char buffer[256];
-    memset(buffer, 0, sizeof(buffer));
-
-    // move cursor to the beginning of the line and clear the line
-    printf("\033[1G\033[2K");
-
-    // prompt for user input
-    printf(">> ");
-    fgets(buffer, 255, stdin);
-
-    // sending message to server
-    int bytes_sent;
-    TRY(bytes_sent = send(client_socket, buffer, strlen(buffer), 0), < 0, "Sending Failed!\n");
 }
