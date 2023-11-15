@@ -8,11 +8,12 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include "memory.h"
+
 // Wrapper function for error handling
 #define TRY(expr, condition, error_msg) \
   do { \
-    if ((expr) condition) { \
-      perror(error_msg); \
+    if ((expr) condition) { perror(error_msg); \
       exit(EXIT_FAILURE); \
     } \
   } while (0)
@@ -20,7 +21,6 @@
 // prototypes
 void receive_message(int client_socket);
 void send_message(int client_socket);
-
 
 int main(int argc, char* argv[]) {
   // Check if the passed arguments is valid
@@ -51,6 +51,11 @@ int main(int argc, char* argv[]) {
   TRY(connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)), < 0, "Connection Failed!\n");
   printf("Connected to Server!\n\n");
   printf("Start chatting:\n\n");
+
+  // Open the shared memory object
+  int shm_fd = open_shared_memory();
+
+  void *shm_ptr = mmap(NULL, SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
 
   // send and receive message to and from server
   int pid = fork();

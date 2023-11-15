@@ -7,6 +7,8 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include "memory.h"
+
 // Wrapper function for error handling
 #define TRY(expr, condition, error_msg) \
   do { \
@@ -43,7 +45,7 @@ int main (int argc, char* argv[]) {
   TRY(bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)), < 0, "Binding Failed!\n");
   printf("Socket binded successfully!\n");
   
-  // server listens and can queue upto 10 requests
+  // server listens and can queue up to 10 requests
   listen(server_socket, 5);
   printf("Server Listening to port %d\n", port_number);
 
@@ -56,6 +58,12 @@ int main (int argc, char* argv[]) {
   TRY(client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &client_size), < 0, "Accepting Failed!\n");
   printf("Client Connected Successfully!\n\n");
   printf("Start Chatting: \n\n");
+
+  // Create shared memory
+  int shm_fd = init_shared_memory();
+
+  // Map the shared memory object on memory
+  void *shm_ptr = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
 
   // send and receive message to and from client
   int pid = fork();
