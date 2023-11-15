@@ -48,19 +48,25 @@ int main (int argc, char* argv[]) {
   printf("Client Connected Successfully!\n\n");
   printf("Start Chatting: \n\n");
 
-  /*
   // Create shared memory
   int shm_fd = init_shared_memory();
 
   // Map the shared memory object on memory
   void *shm_ptr = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  */
+
+  // 0 - Server can send a message
+  // 1 - Client can send a message
+  // Initially the server can send a message
+  sprintf((char*) shm_ptr, "%s", "1\0");
 
   // send and receive message to and from client
   int pid = fork();
   while(1) {
     if (pid == 0) {
-      send_message(client_socket, "client");
+      if (strcmp((char*) shm_ptr, "1") == 0) {
+        send_message(client_socket, "client");
+        sprintf((char*) shm_ptr, "%s", "0\0");
+      }
     } else {
       receive_message(client_socket, "client");
     }

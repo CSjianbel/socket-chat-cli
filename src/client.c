@@ -12,7 +12,6 @@
 #include "memory.h"
 #include "message.h"
 
-
 int main(int argc, char* argv[]) {
   // Check if the passed arguments is valid
   TRY(argc, < 3, "Usage: ./client host_name port_number\n");
@@ -43,18 +42,29 @@ int main(int argc, char* argv[]) {
   printf("Connected to Server!\n\n");
   printf("Start chatting:\n\n");
 
-  /*
   // Open the shared memory object
   int shm_fd = open_shared_memory();
 
-  void *shm_ptr = mmap(NULL, SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
-  */
+  void *shm_ptr = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+
+  // 0 - Server can send a message
+  // 1 - Client can send a message
+  // Initially the server can send a message
 
   // send and receive message to and from server
   int pid = fork();
   while (1) {
-    if (pid == 0) send_message(client_socket, "server");
-    else receive_message(client_socket, "server");
+    if (pid == 0) {
+      // Verify if client's turn to send a message
+      if (strcmp((char*) shm_ptr, "0") == 0) {
+        // Send the message
+        send_message(client_socket, "server");
+        // Set shared memory to 1
+        sprintf((char*) shm_ptr, "%s", "1\0");
+      }
+    } else {
+      receive_message(client_socket, "server");
+    }
   }
 
   printf("Closing connection ...\n");
