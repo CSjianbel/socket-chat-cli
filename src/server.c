@@ -7,18 +7,9 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-// Wrapper function for error handling
-#define TRY(expr, condition, error_msg) \
-  do { \
-    if ((expr) condition) { \
-      perror(error_msg); \
-      exit(EXIT_FAILURE); \
-    } \
-  } while (0)
-
-// prototypes
-void receive_message(int client_socket);
-void send_message(int client_socket);
+#include "error.h"
+#include "memory.h"
+#include "message.h"
 
 
 int main (int argc, char* argv[]) {
@@ -43,7 +34,7 @@ int main (int argc, char* argv[]) {
   TRY(bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)), < 0, "Binding Failed!\n");
   printf("Socket binded successfully!\n");
   
-  // server listens and can queue upto 10 requests
+  // server listens and can queue up to 10 requests
   listen(server_socket, 5);
   printf("Server Listening to port %d\n", port_number);
 
@@ -57,13 +48,27 @@ int main (int argc, char* argv[]) {
   printf("Client Connected Successfully!\n\n");
   printf("Start Chatting: \n\n");
 
+  // Create shared memory
+  int shm_fd = init_shared_memory();
+
+  // Map the shared memory object on memory
+  void *shm_ptr = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+
+  // 0 - Server can send a message
+  // 1 - Client can send a message
+  // Initially the server can send a message
+  sprintf((char*) shm_ptr, "%s", "1\0");
+
   // send and receive message to and from client
   int pid = fork();
   while(1) {
     if (pid == 0) {
-      send_message(client_socket);
+      if (strcmp((char*) shm_ptr, "1") == 0) {
+        send_message(client_socket, "client");
+        sprintf((char*) shm_ptr, "%s", "0\0");
+      }
     } else {
-      receive_message(client_socket);
+      receive_message(client_socket, "client");
     }
   }
 
@@ -74,38 +79,3 @@ int main (int argc, char* argv[]) {
   return 0;
 }
 
-
-void receive_message(int client_socket) {
-    char buffer[256];
-    memset(buffer, 0, sizeof(buffer));
-
-    // receiving message from server
-    int bytes_received;
-    TRY(bytes_received = recv(client_socket, buffer, 255, 0), < 0, "Receiving Failed!\n");
-
-    // move cursor to the beginning of the line and clear the line
-    printf("\033[1G\033[2K");
-
-    // display the received message
-    printf("[client] > %s", buffer);
-
-    // prompt for a new input
-    printf(">> ");
-    fflush(stdout);
-}
-
-void send_message(int client_socket) {
-    char buffer[256];
-    memset(buffer, 0, sizeof(buffer));
-
-    // move cursor to the beginning of the line and clear the line
-    printf("\033[1G\033[2K");
-
-    // prompt for user input
-    printf(">> ");
-    fgets(buffer, 255, stdin);
-
-    // sending message to server
-    int bytes_sent;
-    TRY(bytes_sent = send(client_socket, buffer, strlen(buffer), 0), < 0, "Sending Failed!\n");
-}
